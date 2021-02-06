@@ -7,9 +7,10 @@ module.exports = function(app, myDataBase) {
 
         .get(function(req, res) {
             let project = req.params.project;
+            let query = req.query;
             if(project !== "") {
                 const collection = myDataBase.collection(project);
-                collection.find({}).toArray((err, data) => {
+                collection.find(query).toArray((err, data) => {
                     if(!!err) {
                         return res.json({"error": "Server error, please try later"});
                     } else if(!!data) {
@@ -73,20 +74,36 @@ module.exports = function(app, myDataBase) {
                 status_text,
                 open
             } = req.body;
+            let updateObj = req.body;
+            console.log("PUT req: ", req.body, req.params);
 
             const collection = myDataBase.collection(project);
 
             if(!_id) {
-                return res.status(404).json({ error: 'missing _id' });
-            } else if(!issue_text && !issue_title && !created_by && !assigned_to && !status_text) {
-                return res.status(404).json({error: 'no update field(s) sent', '_id': _id })
+                return res.json({ error: 'missing _id' });
+            } else if(!!_id && Object.keys(req.body).length === 1) {
+                return res.json({error: 'no update field(s) sent', '_id': _id });
             } else {
-                collection.findOneAndUpdate({_id: new ObjectID(_id)}, {
-                    $setOnInsert: {
+                collection.updateOne({_id: ObjectID(_id)}, {
+                    $set: {
                         updated_on: new Date().toISOString(),
-                        
+                        issue_text: !!issue_text && issue_text,
+                        issue_title: !!issue_title && issue_title,
+                        created_by: !!created_by && created_by,
+                        assigned_to: !!assigned_to && assigned_to,
+                        open: !!open && open,
+                        status_text: !!status_text && status_text
                     }
 
+                }, {
+     upsert: true
+   }, (err, data) => {
+                    if(!!err) {
+                        return res.status(400).json({error: "could not update", "_id": _id});
+                    } else if (!!data) {
+                        console.log("PUT res: ", data.result)
+                        return res.status(200).json({  result: 'successfully updated', '_id': _id })
+                    }
                 })
             }
         })
@@ -94,20 +111,25 @@ module.exports = function(app, myDataBase) {
         .delete(function(req, res) {
             let project = req.params.project;
             let id = req.body._id;
+            console.log("DEL req: ", req.body, req.params)
             const collection = myDataBase.collection(project);
 
             if(!id) {
-                return res.status(404).json({ error: 'missing _id' });;
+                return res.json({ error: 'missing _id' });;
+            }
+
+            if(Object.keys(req.body).length > 1) {
+                return res.json({ error: 'could not delete', '_id': id });
             }
 
             if(project !== "") {
-                collection.deleteOne({_id: new ObjectID(id)}, (err, data) => {
+                collection.deleteOne({_id: ObjectID(id)}, (err, data) => {
                     if(!!err) {
                         return res.json({ error: 'could not delete', '_id': id })
                     }
 
                     if(!!data) {
-                        return res.json({ result: 'successfully deleted', '_id': id });
+                        return res.status(200).json({ result: 'successfully deleted', '_id': id });
                     }
                 })
             }
