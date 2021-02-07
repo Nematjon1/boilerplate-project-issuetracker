@@ -1,6 +1,10 @@
 'use strict';
 const { ObjectID } = require('mongodb');
 
+const filterer = (arr, obj) => {
+  arr.filter(a => !!a[1]).map(a => obj[a[0]] = a[1])
+}
+
 module.exports = function(app, myDataBase) {
 
     app.route('/api/issues/:project')
@@ -63,48 +67,48 @@ module.exports = function(app, myDataBase) {
 
         })
 
-        .put(function(req, res) {
+         .put(function(req, res) {
             let project = req.params.project;
+
+            if(project !== "") {
+                let { _id, issue_title, issue_text, created_by, assigned_to, status_text, open } = req.body;
+
+                      let updateObj = {}
+                        const updates = [
+                            ['issue_title', issue_title],
+                            ['issue_text', issue_text],
+                            ['created_by', created_by],
+                            ['assigned_to', assigned_to],
+                            ['open', open],
+                            ['status_text', status_text],
+                            ['updated_on', new Date()]
+                        ]
+
+                        filterer(updates, updateObj);
 
             const collection = myDataBase.collection(project);
 
             if(!_id) {
                 return res.json({ error: 'missing _id' });
-            } else if(Object.values(req.body).filter(i => i !== "").length === 1) {
+            } else if(Object.values(updateObj).length === 1) {
                 return res.json({error: 'no update field(s) sent', '_id': _id });
             }else if(!ObjectID.isValid(_id)) {
+                consolelog("ObjectID: ", !ObjectID.isValid(_id))
                 return res.json({error: "could not update", "_id": _id});
             } else {
-                let query = {_id: new ObjectID(req.body._id)};
-                if(req.body.issue_title) {
-                    query.issue_title = req.body.issue_title;
-                }
-                if(req.body.issue_text) {
-                    query.issue_text = req.body.issue_text;
-                }
-                query.updated_on = new Date().toISOString();
-                if(req.body.created_by) {
-                    query.created_by = req.body.created_by;
-                }
-                if(req.body.assigned_to) {
-                    query.assigned_to = req.body.assigned_to;
-                }
-                if(req.body.open) {
-                    query.open = false;
-                }
-                if(req.body.status_text) {
-                    query.status_text = req.body.status_text;
-                }
-                collection.updateOne({_id: ObjectID(_id)}, {
-                    $set: query
+
+                collection.findOneAndUpdate({_id: new ObjectID(_id)}, {
+                    $set: updateObj
 
                 }, (err, data) => {
                     if(!!err) {
+                    console.log("PUT res: err", query)
                         return res.json({error: "could not update", "_id": _id});
                     } else if (!!data) {
-                        return res.json({  result: 'successfully updated', '_id': _id })
+                        return res.status(200).json({  result: 'successfully updated', '_id': _id })
                     }
                 })
+            }
             }
         })
 
