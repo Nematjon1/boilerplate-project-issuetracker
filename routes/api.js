@@ -75,16 +75,12 @@ module.exports = function(app, myDataBase) {
             }else if(!ObjectID.isValid(_id)) {
                 return res.json({error: "could not update", "_id": _id});
             } else {
-                console.log("PUT body: ", req.body);
                 let query = {_id: new ObjectID(req.body._id)};
                 if(req.body.issue_title) {
                     query.issue_title = req.body.issue_title;
                 }
                 if(req.body.issue_text) {
                     query.issue_text = req.body.issue_text;
-                }
-                if(req.body.created_on) {
-                    query.created_on = new Date(req.body.created_on);
                 }
                 query.updated_on = new Date().toISOString();
                 if(req.body.created_by) {
@@ -100,10 +96,7 @@ module.exports = function(app, myDataBase) {
                     query.status_text = req.body.status_text;
                 }
                 collection.updateOne({_id: ObjectID(_id)}, {
-                    $set: query/*,
-                    $inc: {
-                       updated_on: new Date().toISOString() 
-                    }*/
+                    $set: query
 
                 }, (err, data) => {
                     if(!!err) {
