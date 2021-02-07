@@ -111,7 +111,6 @@ module.exports = function(app, myDataBase) {
         .delete(function(req, res) {
             let project = req.params.project;
             let id = req.body._id;
-            console.log("DEL req: ", req.body, req.params)
             const collection = myDataBase.collection(project);
 
             if(!id) {
